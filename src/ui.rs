@@ -43,34 +43,23 @@ fn draw_first_tab(frame: &mut Frame, app: &mut App, area: Rect) {
 
 #[allow(clippy::too_many_lines)]
 fn draw_charts(frame: &mut Frame, app: &mut App, area: Rect) {
-    let constraints = if app.show_chart {
-        vec![Constraint::Percentage(50), Constraint::Percentage(50)]
-    } else {
-        vec![Constraint::Percentage(100)]
-    };
-    let chunks = Layout::horizontal(constraints).split(area);
-    {
-        let chunks = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(chunks[0]);
-
-        let barchart = BarChart::default()
-            .block(Block::bordered().title("Bar chart"))
-            .data(&app.barchart)
-            .bar_width(3)
-            .bar_gap(2)
-            .bar_set(if app.enhanced_graphics {
-                symbols::bar::NINE_LEVELS
-            } else {
-                symbols::bar::THREE_LEVELS
-            })
-            .value_style(
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Green)
-                    .add_modifier(Modifier::ITALIC),
-            )
-            .label_style(Style::default().fg(Color::Yellow))
-            .bar_style(Style::default().fg(Color::Green));
-        frame.render_widget(barchart, chunks[1]);
-    }
+    let barchart = BarChart::default()
+        .block(Block::bordered().title("Bar chart"))
+        .data(&app.barchart)
+        .bar_width(3)
+        .bar_gap(2)
+        .bar_set(if app.enhanced_graphics {
+            symbols::bar::NINE_LEVELS
+        } else {
+            symbols::bar::THREE_LEVELS
+        })
+        .value_style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Green)
+                .add_modifier(Modifier::ITALIC),
+        )
+        .label_style(Style::default().fg(Color::Yellow))
+        .bar_style(Style::default().fg(Color::Green));
+    frame.render_widget(barchart, area);
 }
