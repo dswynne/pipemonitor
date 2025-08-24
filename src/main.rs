@@ -8,6 +8,8 @@ mod crossterm;
 
 mod ui;
 
+mod pipe;
+
 /// Demo
 #[derive(Debug, FromArgs)]
 struct Cli {
