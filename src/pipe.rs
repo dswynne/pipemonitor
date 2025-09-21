@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::ops::{Index, IndexMut};
 use zmq;
 
 // TODO: Add pipe name to initilization
@@ -6,7 +7,7 @@ pub struct Pipe<T> {
     deque: VecDeque<T>,
     max_capacity: usize,
     address: String,
-    socket: zmq::Socket
+    socket: zmq::Socket,
 }
 
 impl<T> Pipe<T> {
@@ -14,13 +15,15 @@ impl<T> Pipe<T> {
         // Connect to ZMQ socket at the address
         let context = zmq::Context::new();
         let socket = context.socket(zmq::PUB).expect("Failed to create socket");
-        socket.connect(&address).expect("Failed to connect to address");
+        socket
+            .connect(&address)
+            .expect("Failed to connect to address");
 
         Pipe {
             deque: VecDeque::with_capacity(max_capacity),
             max_capacity,
             address,
-            socket
+            socket,
         }
     }
 
@@ -31,23 +34,56 @@ impl<T> Pipe<T> {
             popped_item
         } else {
             self.deque.push_back(item);
+            // TODO: this should return something better than none
             None
         };
 
-        // TODO: Wrap this whole section into a helper function since we will want it for pop_front too
+        self.report_status();
+
+        result
+    }
+
+    pub fn pop_front(&mut self) -> Option<T> {
+        let result = if self.deque.len() == 0 {
+            None
+        } else {
+            self.deque.pop_front()
+        };
+
+        self.report_status();
+
+        result
+    }
+
+    pub fn len(&mut self) -> usize {
+        self.deque.len()
+    }
+
+    fn report_status(&mut self) {
         // TODO: We will also want to optionally set it up to not be done on every change of the pipe
         // Send current size of deque out zmq socket
         // TODO: compose this as some standard message format that also has the pipename
         let size_str = self.deque.len().to_string();
         // TODO: Handle send errors
-        // TODO: Figure out why send causes hang
-        // let _ = self.socket.send(size_str.as_bytes(), 0);
-
-        result
+        let _ = self.socket.send(size_str.as_bytes(), 0);
     }
 
     // Other VecDeque methods like pop_front, pop_back, etc., can be
     // implemented by simply delegating to the inner `deque`.
+}
+
+impl<T> Index<usize> for Pipe<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.deque[index]
+    }
+}
+
+impl<T> IndexMut<usize> for Pipe<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.deque[index]
+    }
 }
 
 #[cfg(test)]
@@ -66,9 +102,48 @@ mod tests {
         assert_eq!(pipe.push_back(1), None);
         assert_eq!(pipe.push_back(2), None);
         assert_eq!(pipe.push_back(3), None);
-        assert_eq!(pipe.deque.len(), 3);
-        assert_eq!(pipe.deque[0], 1);
-        assert_eq!(pipe.deque[1], 2);
-        assert_eq!(pipe.deque[2], 3);
+        assert_eq!(pipe.len(), 3);
+        assert_eq!(pipe[0], 1);
+        assert_eq!(pipe[1], 2);
+        assert_eq!(pipe[2], 3);
+    }
+
+    #[test]
+    fn test_push_back_over_capacity() {
+        let mut pipe: Pipe<u32> = Pipe::new(2, String::from("tcp://127.0.0.1:5555"));
+        assert_eq!(pipe.push_back(10), None);
+        assert_eq!(pipe.push_back(20), None);
+        // Now at capacity, next push should evict 10
+        assert_eq!(pipe.push_back(30), Some(10));
+        assert_eq!(pipe.len(), 2);
+        assert_eq!(pipe[0], 20);
+        assert_eq!(pipe[1], 30);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_index_out_of_bounds() {
+        let mut pipe: Pipe<u32> = Pipe::new(1, String::from("tcp://127.0.0.1:5555"));
+        pipe.push_back(42);
+        let _ = pipe[1]; // Should panic
+    }
+
+    #[test]
+    fn test_pipe_with_strings() {
+        let mut pipe: Pipe<String> = Pipe::new(2, String::from("tcp://127.0.0.1:5555"));
+        assert_eq!(pipe.push_back("foo".to_string()), None);
+        assert_eq!(pipe.push_back("bar".to_string()), None);
+        assert_eq!(pipe[0], "foo");
+        assert_eq!(pipe[1], "bar");
+        assert_eq!(pipe.push_back("baz".to_string()), Some("foo".to_string()));
+        assert_eq!(pipe[0], "bar");
+        assert_eq!(pipe[1], "baz");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_empty_pipe_index_panic() {
+        let pipe: Pipe<u32> = Pipe::new(2, String::from("tcp://127.0.0.1:5555"));
+        let _ = pipe[0]; // Should panic
     }
 }
