@@ -3,6 +3,7 @@ use std::ops::{Index, IndexMut};
 use zmq;
 
 // TODO: Add pipe name to initilization
+// TODO: Figure out thread-safety -> https://blog.rust-lang.org/2015/04/10/Fearless-Concurrency/
 pub struct Pipe<T> {
     deque: VecDeque<T>,
     max_capacity: usize,
@@ -34,7 +35,7 @@ impl<T> Pipe<T> {
             popped_item
         } else {
             self.deque.push_back(item);
-            // TODO: this should return something better than none
+            // TODO: this should return something better than none...Result vs. option?
             None
         };
 
@@ -68,8 +69,6 @@ impl<T> Pipe<T> {
         let _ = self.socket.send(size_str.as_bytes(), 0);
     }
 
-    // Other VecDeque methods like pop_front, pop_back, etc., can be
-    // implemented by simply delegating to the inner `deque`.
 }
 
 impl<T> Index<usize> for Pipe<T> {
