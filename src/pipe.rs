@@ -13,7 +13,7 @@ impl<T> Pipe<T> {
     pub fn new(max_capacity: usize, address: String) -> Self {
         // Connect to ZMQ socket at the address
         let context = zmq::Context::new();
-        let socket = context.socket(zmq::REQ).expect("Failed to create socket");
+        let socket = context.socket(zmq::PUB).expect("Failed to create socket");
         socket.connect(&address).expect("Failed to connect to address");
 
         Pipe {
