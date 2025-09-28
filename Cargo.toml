@@ -25,3 +25,6 @@ crossterm = ["dep:crossterm"]
 ## Underline color is only supported by the [`CrosstermBackend`](backend::CrosstermBackend) backend,
 ## and is not supported on Windows 7.
 underline-color = ["dep:crossterm"]
+
+[[example]]
+name = "demo"
