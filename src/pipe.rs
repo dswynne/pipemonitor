@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
 use zmq;
+use std::sync::{Arc, Mutex};
 
 // TODO: Add pipe name to initilization
 // TODO: Figure out thread-safety -> https://blog.rust-lang.org/2015/04/10/Fearless-Concurrency/
@@ -16,9 +17,7 @@ impl<T> Pipe<T> {
         // Connect to ZMQ socket at the address
         let context = zmq::Context::new();
         let socket = context.socket(zmq::PUB).expect("Failed to create socket");
-        socket
-            .connect(&address)
-            .expect("Failed to connect to address");
+        socket.connect(&address).expect("Failed to connect to address");
 
         Pipe {
             deque: VecDeque::with_capacity(max_capacity),
@@ -26,6 +25,11 @@ impl<T> Pipe<T> {
             address,
             socket,
         }
+    }
+
+    /// Create a new Pipe wrapped in Arc<Mutex<>> for thread-safe sharing
+    pub fn new_shared(max_capacity: usize, address: String) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self::new(max_capacity, address)))
     }
 
     pub fn push_back(&mut self, item: T) -> Option<T> {

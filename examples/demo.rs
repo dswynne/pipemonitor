@@ -5,7 +5,7 @@ use pipemonitor::pipe::Pipe;
 
 fn main() {
     // Create a shared Pipe wrapped in Arc<Mutex<>>
-    let pipe = Arc::new(Mutex::new(Pipe::new(5, String::from("tcp://127.0.0.1:5555"))));
+    let pipe = Pipe::new_shared(5, String::from("tcp://127.0.0.1:5555"));
 
     // Producer thread: pushes numbers 1..=10 into the pipe
     let pipe_producer = Arc::clone(&pipe);
